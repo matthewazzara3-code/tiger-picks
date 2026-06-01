@@ -1,0 +1,48 @@
+# =============================================================================
+# GitHub Actions: Run MLB model daily and publish to GitHub Pages
+# =============================================================================
+name: Daily MLB Picks
+
+on:
+  schedule:
+    # Runs at 11:00 AM ET every day (15:00 UTC)
+    # Adjust this time to be ~30 min after your model finishes
+    - cron: '0 15 * * *'
+  workflow_dispatch:  # allows manual trigger from GitHub UI
+
+jobs:
+  run-model:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to push picks_today.json
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy scikit-learn xgboost requests pybaseball
+
+      - name: Run MLB model
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python mlb_betting_model_v9.py
+
+      - name: Export picks to JSON
+        run: |
+          python export_picks.py
+
+      - name: Commit and push picks_today.json
+        run: |
+          git config user.name "MLB Edge Bot"
+          git config user.email "bot@mlb-edge.com"
+          git add picks_today.json mlb_predictions_log.csv mlb_record_summary.csv
+          git diff --staged --quiet || git commit -m "picks: $(date +'%Y-%m-%d')"
+          git push
