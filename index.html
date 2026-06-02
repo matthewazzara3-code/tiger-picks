@@ -275,7 +275,12 @@ function resultLabel(r){
 // ── MLB LIVE DATA ──────────────────────────────────────────────────────────
 async function fetchLiveScores(){
   try {
-    const todayStr = today.toISOString().split('T')[0];
+    // Use LOCAL date (not UTC) so evening games don't roll over to next day
+    const todayStr = [
+      today.getFullYear(),
+      String(today.getMonth()+1).padStart(2,'0'),
+      String(today.getDate()).padStart(2,'0')
+    ].join('-');
     const r = await fetch(`${MLB_API}/schedule?sportId=1&date=${todayStr}&hydrate=linescore,team`);
     const data = await r.json();
     const games = {};
